@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optigration SDK UI</title>
+
+    <!-- Add Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        .loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            text-align: center;
+            z-index: 9999;
+        }
+    </style>
+
+</head>
+<body>
+    <div id="loader" class="loader">
+        Loading...
+    </div>
+
+    <div class="container mt-5">
+        <h1 class="text-center">Optigration SDK UI</h1>
+
+        <div class="mb-3">
+            <button class="btn btn-primary" onclick="initSDK()">Init SDK</button>
+            <br>
+            Status: <label id="isSDKInitialized"></label>
+        </div>
+
+        <div class="mb-3">
+            <label for="initInput">JSON Input for Init SDK:</label>
+            <textarea class="form-control" id="initInput" rows="5"></textarea>
+        </div>
+
+        <h2>Campaign Metadata:</h2>
+        <div class="mb-3">
+            <button class="btn btn-primary" onclick="getMetadata()">Get Metadata</button>
+        </div>
+        <pre id="metadata"></pre>
+
+        <h2>Customers Per Batch:</h2>
+        <div class="mb-3">
+            <label for="customerIndex">Batch index (1 based):</label>
+            <input type="number" class="form-control" id="customerIndex">
+        </div>
+        <div class="mb-3">
+            <button class="btn btn-primary" onclick="getCustomers()">Get Customers</button>
+        </div>
+        <pre id="customers"></pre>
+    </div>
+
+    <!-- Add Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function isSDKInitialized() {
+            fetch('/isSDKInitialized')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('isSDKInitialized').textContent = data.isSDKInitialized;
+                })
+                .catch(err => {
+                    hideLoader();
+                    alert(err);
+                })
+        }
+
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function initSDK() {
+            const initData = JSON.parse(document.getElementById('initInput').value);
+            if (!initData) return;
+            showLoader();
+
+            fetch('/init', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(initData)
+            })
+            .then(response => {
+                hideLoader();
+                isSDKInitialized();
+            })
+            .catch(err => {
+                hideLoader();
+                alert(err);
+            })
+        }
+
+        function getMetadata() {
+            showLoader();
+            document.getElementById('metadata').textContent = "";
+            
+            fetch('/metadata')
+                .then(response => response.json())
+                .then(data => {
+                    hideLoader();
+
+                    if (data && data.err) {
+                        if (data.err.message) {
+                            alert(data.err.message);    
+                        } else {
+                            alert(data.err)
+                        }
+                    } else {
+                        document.getElementById('metadata').textContent = JSON.stringify(data, null, 2);
+                    }
+                })
+                .catch(err => {
+                    hideLoader();
+                    alert(err);
+                })
+        }
+
+        async function getCustomers() {
+            document.getElementById('customers').textContent = "";
+            const index = document.getElementById('customerIndex').value;
+
+            if (!index || index < 1) {
+                alert('Please put a valid batch id (1 based)');
+            } else {
+                showLoader();
+
+                try {
+                    fetch(`/customers/${index}`)
+                    .then((response) => {
+                        hideLoader();
+                        return response.json();
+                    })
+                    .then(data => {  
+                        if (data && data.err) {
+                            if (data.err.message) {
+                                alert(data.err.message);    
+                            } else {
+                                alert(data.err)
+                            }
+                        } else {
+                            document.getElementById('customers').textContent = JSON.stringify(data, null, 2);
+                        }
+                    });
+                }
+                catch (err) {
+                    hideLoader();
+                    alert(err);
+                }
+            }
+        }
+    
+        isSDKInitialized();
+    </script>
+</body>
+</html>
